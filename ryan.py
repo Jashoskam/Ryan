@@ -32,8 +32,8 @@ logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s 
 # load ai model with tracing
 try:
     logging.info("attempting to load model and tokenizer")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-350m")
-    model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
+    model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
     logging.info("model and tokenizer loaded successfully")
 except Exception as e:
     tokenizer = None
