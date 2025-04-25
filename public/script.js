@@ -115,33 +115,32 @@ document.addEventListener("keypress", event => {
 async function fetchLogs() {
     try {
         const res = await fetch("http://127.0.0.1:5001/logs");
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
 
-        // Ensure the response is OK and of type JSON
-        if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-        }
+        const { logs } = await res.json();
+        const logsBox = document.getElementById("logs-box");
+        logsBox.innerHTML = "";
 
-        const contentType = res.headers.get("Content-Type");
+        logs.forEach(line => {
+            const div = document.createElement("div");
+            div.classList.add("log-line");
 
-        // Check if the response is JSON
-        if (contentType && contentType.includes("application/json")) {
-            const { logs } = await res.json();
+            if (line.toLowerCase().includes("error")) {
+                div.classList.add("error");
+            } else if (line.toLowerCase().includes("warn")) {
+                div.classList.add("warning");
+            } else {
+                div.classList.add("info");
+            }
 
-            const logsBox = document.getElementById("logs-box");
-            logsBox.innerHTML = "";
+            div.textContent = line;
+            logsBox.appendChild(div);
+        });
 
-            logs.forEach(rawLine => {
-                const logEntry = createLogEntry(rawLine);
-                logsBox.appendChild(logEntry);
-            });
-
-            logsBox.scrollTop = logsBox.scrollHeight;
-        } else {
-            throw new Error("Expected JSON response but got something else.");
-        }
-    } catch (error) {
-        console.error("Failed to fetch logs:", error);
-        alert("An error occurred while fetching the logs.");
+        logsBox.scrollTop = logsBox.scrollHeight;
+    } catch (err) {
+        console.error("Failed to fetch logs:", err);
+        alert("An error occurred while fetching logs.");
     }
 }
 

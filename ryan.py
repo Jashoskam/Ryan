@@ -165,12 +165,11 @@ async def chat_with_ai(message: Message):
 async def get_logs():
     try:
         with open("app.log", "r") as f:
-            lines = f.readlines()[-50:]
-        return JSONResponse(content={"logs": [line.strip() for line in lines]})
+            lines = f.readlines()[-50:]  # get last 50 log lines
+        clean_lines = [line.strip() for line in lines if line.strip()]
+        return JSONResponse(content={"logs": clean_lines})
     except Exception as e:
-        logging.error(f"failed to read logs: {e}")
-        logging.error(traceback.format_exc())
-        return JSONResponse(content={"logs": ["error reading logs."]})
+        return JSONResponse(content={"logs": [f"error reading logs: {str(e)}"]})
 
 @app.get("/stats")
 async def get_stats():

@@ -75,7 +75,7 @@ body {
     overflow: hidden;
 }
 
-#chat-box, #logs-box {
+#chat-box {
     flex: 1;
     overflow-y: auto;
     border-radius: 10px;
@@ -88,7 +88,45 @@ body {
     padding-right: 10px;
     scroll-behavior: smooth;
 }
+#logs-box {
+  flex: 1;
+    overflow-y: auto;
+    border-radius: 10px;
+    padding: 15px;
+    background: #222;
+    box-shadow: inset 0 0 10px #000;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 220px);
+    padding-right: 10px;
+    scroll-behavior: smooth;
+}
+.log-line {
+    margin-bottom: 8px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-family: monospace;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+}
 
+.log-line.info {
+    background-color: #2d2d2d;
+    color: #dcdcdc;
+}
+
+.log-line.warning {
+    background-color: #4a3f00;
+    color: #ffdd57;
+}
+
+.log-line.error {
+    background-color: #3a0000;
+    color: #ff6f6f;
+    font-weight: bold;
+}
 #logs {
     flex: 1;
     overflow-y: auto;

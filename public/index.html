@@ -57,7 +57,7 @@
     <script src="script.js"></script>
     <script>
         async function fetchLogs() {
-            const response = await fetch('/get-logs');
+            const response = await fetch('/logs');
             const logsText = await response.text();
             const logsBox = document.getElementById('logs-box');
             logsBox.innerHTML = '';
