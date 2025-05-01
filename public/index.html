@@ -3,38 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <title>AI Chat</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
     <div id="sidebar">
-	<button id="toggle-sidebar" onclick="toggleSidebar()">☰</button>
-        <button id="chat-button" onclick="showSection('chat-container')">💬 Chat</button>
-        <button id="logs-button" onclick="showSection('logs-container')">📜 Logs</button>
-        <button id="settings-button" onclick="showSection('settings-container')">⚙️ Settings</button>
+
+    <button id="toggle-sidebar">☰</button>
+
+    <div id="ai-orb-container">
+        <div class="ai-orb" id="ai-orb"></div>
     </div>
 
+    <button id="chat-button" title="Chat">
+        <i class="fas fa-comment"></i>
+        <span class="button-label">Chat</span>
+    </button>
+
+    <button id="logs-button" title="Logs">
+        <i class="fas fa-file-alt"></i>
+        <span class="button-label">Logs</span>
+    </button>
+
+    <button id="settings-button" title="Settings">
+        <i class="fas fa-cog"></i>
+        <span class="button-label">Settings</span>
+    </button>
+
+    <button id="memory-button" title="Memory">
+        <i class="fas fa-brain"></i>
+        <span class="button-label">Memory</span>
+    </button>
+
+</div>
+
+
     <div id="main-content">
-        <!-- Chat Section -->
         <div id="chat-container" class="section">
             <h2>AI Chat</h2>
-            <div id="chat-box"></div>
+            <div id="chat-box">
+                </div>
             <div class="input-container">
-                <input id="chat-input" type="text" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
-                <button onclick="sendMessage()">➤</button>
-                <button id="mic-button">🎤</button>
+                <input type="file" id="document-input" style="display: none;" accept=".txt,.pdf,.docx">
+                <button id="attach-button" title="Attach Document">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+
+                <input id="chat-input" type="text" placeholder="Type a message..." />
+                <button id="mic-button" title="Voice Input">
+                    <i class="fas fa-microphone"></i>
+                </button>
             </div>
         </div>
 
-        <!-- Logs Section -->
+        <div id="creative-sidebar" class="section">
+             <div class="section-header">
+                  <h2>Creative Outputs</h2>
+                  <button id="close-creative-sidebar" class="close-creative-sidebar" title="Close">
+                      <i class="fas fa-times"></i>
+                  </button>
+             </div>
+
+             <div id="creative-output-controls">
+                  <select id="creative-output-select">
+                      <option value="-1">No Creative Outputs</option>
+                  </select>
+                  <button id="save-active-creative" class="action-button save-button" title="Save Active Output">
+                      <i class="fas fa-save"></i>
+                  </button>
+                  <button id="copy-active-creative" class="action-button copy-button" title="Copy Active Output">
+                      <i class="fas fa-copy"></i>
+                  </button>
+                  <button id="clear-active-creative" class="action-button clear-button" title="Clear Active Output">
+                      <i class="fas fa-trash"></i>
+                  </button>
+             </div>
+
+             <div id="creative-output-display">
+                  </div>
+
+             <div class="resize-handle-creative"></div>
+        </div>
         <div id="logs-container" class="section" style="display: none;">
-            <h2>Logs</h2>
-            <div id="logs-box"></div>
-            <button onclick="fetchLogs()">🔄 Refresh Logs</button>
+            <div class="section-header">
+                <h2>Logs</h2>
+            </div>
+            <div id="logs-box">
+                </div>
+             <div class="button-group">
+                  <button id="refresh-logs-button">
+                      <i class="fas fa-sync-alt"></i> 
+                  </button>
+             </div>
         </div>
 
-        <!-- Settings Section -->
         <div id="settings-container" class="section" style="display: none;">
             <h2>Settings</h2>
             <div class="toggle-container">
@@ -44,41 +112,17 @@
                     <span class="slider"></span>
                 </label>
             </div>
-        </div>
-    </div>
+            </div>
 
-    <!-- AI Orb Animation with Visualizer -->
-    <div id="ai-orb-container">
-        <div class="ai-orb" id="ai-orb">
-            <div id="visualizer"></div>
-        </div>
-    </div>
+        <div id="memory-container" class="section" style="display: none;">
+            <h2>Memory</h2>
+            <div id="memory">
+                </div>
+            </div>
 
+          </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="script.js"></script>
-    <script>
-        async function fetchLogs() {
-            const response = await fetch('/logs');
-            const logsText = await response.text();
-            const logsBox = document.getElementById('logs-box');
-            logsBox.innerHTML = '';
-            logsText.split('\n').forEach(line => {
-                if (line.trim() !== '') {
-                    const div = document.createElement('div');
-                    div.className = 'log-entry';
-                    div.textContent = line;
-                    logsBox.appendChild(div);
-                }
-            });
-        }
-
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(section => section.style.display = 'none');
-            document.getElementById(sectionId).style.display = 'flex';
-
-            if (sectionId === 'logs-container') {
-                fetchLogs();
-            }
-        }
-    </script>
 </body>
 </html>

@@ -1,377 +1,1192 @@
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'); /* Added 700 weight */
+
 body {
     font-family: 'Inter', sans-serif;
     display: flex;
     height: 100vh;
     margin: 0;
-    background-color: #0d0d0d;
-    color: white;
-    overflow: hidden;
+    background-color: #0d0d0d; /* Dark background */
+    color: #e0e0e0; /* Lighter text for better contrast */
+    overflow: hidden; /* Prevent overall scrolling */
+    line-height: 1.6; /* Improved readability */
 }
 
 #sidebar {
-    width: 220px;
-    background: #141414;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: 100%;
-    position: relative;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
-}
-#sidebar.collapsed {
-      width: 45px;
-    background: #141414;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: 100%;
-    position: relative;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
-    }
-
-#sidebar button {
-    background: #1f1f1f;
-    color: white;
-    border: none;
-    padding: 12px;
-    cursor: pointer;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-radius: 8px;
-    transition: background 0.3s;
-}
-
-#sidebar button:hover {
-    background: #292929;
-}
-
-#main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    background-color: #1a1a1a;
-    overflow: hidden;
-    height: 100%;
-}
-
-.section {
-    display: none;
-    flex: 1;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-#chat-container, #logs-container, #settings-container {
+    width: 45px; /* small width */
+    transition: width 0.3s ease;
+    overflow: hidden; /* hide labels when collapsed */
+    background: #1a1a1a;
+    height: 100vh;
+    padding: 15px 10px;
     display: flex;
     flex-direction: column;
     gap: 15px;
+    position: relative;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.6);
+    z-index: 10;
+}
+#sidebar:hover {
+    width: 220px; /* full width */
+}
+
+#sidebar button:hover {
+    background: #3a3a3a; /* Darker hover */
+    transform: translateY(-1px); /* Subtle lift effect */
+}
+
+#sidebar button:active {
+     transform: translateY(0); /* Reset on click */
+}
+
+
+#sidebar button span {
+    display: inline; /* Show text by default */
+    transition: opacity 0.3s ease;
+}
+
+#sidebar.collapsed button span {
+    display: none; /* Hide text when collapsed */
+    opacity: 0;
+}
+#sidebar button {
+    background: #2a2a2a; /* Dark grey */
+    color: #e0e0e0; /* Light grey text */
+    border: none; /* No default border */
+    border-radius: 12px; /* Rounded corners */
+    padding: 12px 15px; /* Padding */
+    font-size: 1.1em; /* Slightly larger font */
+    font-weight: 600; /* Semi-bold */
+    cursor: pointer;
+    text-align: left; /* Align text left */
+    width: 100%; /* Full width */
+    box-sizing: border-box; /* Include padding in width */
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; /* Smooth transitions */
+    display: flex; /* Use flexbox to align icon and text */
+    align-items: center; /* Vertically align icon and text */
+    gap: 10px; /* Space between icon and text */
+}
+
+#toggle-sidebar {
+    align-self: flex-end; /* Align to the right within the sidebar */
+    background: none; /* No background */
+    border: none;
+    color: #e0e0e0;
+    font-size: 28px; /* Larger icon */
+    cursor: pointer;
+    padding: 0; /* Remove padding */
+    width: auto; /* Auto width */
+    margin-bottom: 15px; /* Increased space below the toggle */
+    transition: color 0.2s ease;
+    box-shadow: none; /* Remove shadow for toggle button */
+}
+
+#toggle-sidebar:hover {
+    color: #007bff; /* Highlight color on hover */
+    background: none; /* No background on hover */
+}
+
+#main-content {
+    flex-grow: 1; /* Allow main content to take up remaining space */
+    display: flex; /* Use flexbox for chat and creative sidebar */
     height: 100%;
-    overflow: hidden;
+    overflow: hidden; /* Prevent main content from causing body scroll */
+    position: relative; /* Needed for absolute positioning of other sections */
+}
+
+.section {
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto; /* Enable vertical scrolling for content */
+    scrollbar-width: thin; /* Make scrollbar thinner */
+    scrollbar-color: #444 #1a1a1a; /* Scrollbar color (thumb and track) */
+}
+
+/* Custom scrollbar styles for Webkit browsers */
+.section::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+}
+
+.section::-webkit-scrollbar-track {
+    background: #1a1a1a; /* Color of the track */
+}
+
+.section::-webkit-scrollbar-thumb {
+    background-color: #555; /* Darker thumb */
+    border-radius: 4px; /* Rounded corners of the thumb */
+    border: 2px solid #1a1a1a; /* Border around the thumb */
+}
+
+
+#chat-container {
+    flex-grow: 1; /* Chat takes up most space */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Align content to the bottom */
+    padding-bottom: 10px; /* Add some padding at the bottom for the input */
+    position: relative; /* Needed for input container positioning */
 }
 
 #chat-box {
-    flex: 1;
-    overflow-y: auto;
-    border-radius: 10px;
-    padding: 15px;
-    background: #222;
-    box-shadow: inset 0 0 10px #000;
+    flex-grow: 1; /* Chat box takes up available space */
+    overflow-y: auto; /* Enable scrolling for chat messages */
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 220px);
-    padding-right: 10px;
-    scroll-behavior: smooth;
-}
-#logs-box {
-  flex: 1;
-    overflow-y: auto;
-    border-radius: 10px;
-    padding: 15px;
-    background: #222;
-    box-shadow: inset 0 0 10px #000;
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 220px);
-    padding-right: 10px;
-    scroll-behavior: smooth;
-}
-.log-line {
-    margin-bottom: 8px;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-family: monospace;
-    line-height: 1.4;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-width: 100%;
+    gap: 12px; /* Increased space between messages */
+    padding-right: 10px; /* Add padding to prevent messages hiding scrollbar */
+    padding-bottom: 10px; /* Add padding at the bottom */
+     scrollbar-width: thin; /* Make scrollbar thinner */
+    scrollbar-color: #444 #1a1a1a; /* Scrollbar color (thumb and track) */
 }
 
-.log-line.info {
-    background-color: #2d2d2d;
-    color: #dcdcdc;
+/* Custom scrollbar styles for Webkit browsers */
+#chat-box::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
 }
 
-.log-line.warning {
-    background-color: #4a3f00;
-    color: #ffdd57;
+#chat-box::-webkit-scrollbar-track {
+    background: #1a1a1a; /* Color of the track */
 }
 
-.log-line.error {
-    background-color: #3a0000;
-    color: #ff6f6f;
+#chat-box::-webkit-scrollbar-thumb {
+    background-color: #555; /* Darker thumb */
+    border-radius: 4px; /* Rounded corners of the thumb */
+    border: 2px solid #1a1a1a; /* Border around the thumb */
+}
+
+
+.chat-message {
+    max-width: 75%; /* Slightly wider messages */
+    word-wrap: break-word; /* Break long words */
+    line-height: 1.5; /* Improved line spacing */
+}
+
+.chat-message.user {
+    align-self: flex-end; /* Align user messages to the right */
+    background-color: #1a1a1a; /* Dark background for user */
+    color: #e0e0e0; /* Light text */
+    padding: 14px 18px; /* Increased padding */
+    border-radius: 22px; /* More rounded corners for bubbles */
+    border-bottom-right-radius: 6px; /* Slightly less rounded corner */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle message shadow */
+}
+
+.chat-message.ryan {
+    align-self: flex-start; /* Align Ryan messages to the left */
+    background-color: transparent; /* Remove background */
+    color: #e0e0e0; /* Keep light text */
+    padding: 0; /* Remove padding */
+    border-radius: 0; /* Remove border radius */
+    box-shadow: none; /* Remove shadow */
+    margin: 0; /* Remove margin */
+}
+
+.chat-message.error {
+    align-self: center; /* Center error messages */
+    background-color: #dc3545; /* Red background for errors */
+    color: white;
+    text-align: center;
     font-weight: bold;
+    border-radius: 8px; /* Standard rounded corners */
+    padding: 14px 18px; /* Keep padding for errors */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle message shadow */
 }
-#logs {
-    flex: 1;
-    overflow-y: auto;
-    border-radius: 10px;
-    padding: 15px;
-    background: #111;
-    box-shadow: inset 0 0 10px #000;
-    max-height: calc(100vh - 220px);
-    padding-right: 10px;
-    scroll-behavior: smooth;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+
+/* --- Styling for the View Creative Link Button in Chat --- */
+.chat-message .view-creative-link {
+    background: #555; /* Dark grey background */
+    color: white;
+    border: none;
+    padding: 5px 10px; /* Slightly increased padding */
+    border-radius: 5px; /* Slightly more rounded corners */
+    cursor: pointer;
+    font-size: 0.85em; /* Slightly larger font size */
+    transition: background 0.2s ease;
+    margin-left: 10px; /* Space from the text */
+    display: inline-block; /* Allow padding and margin */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle button shadow */
 }
+
+.chat-message .view-creative-link:hover {
+    background: #007bff; /* Blue hover */
+}
+
+/* --- Typing Indicator Styling --- */
+.typing-indicator {
+    display: inline-block;
+    margin-left: 5px;
+    color: #888; /* Grey color */
+    font-size: 1.2em;
+    animation: pulse 1s infinite; /* Pulsating animation */
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
 
 .input-container {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    padding: 15px 20px; /* Increased padding around the input area */
+    background: #1a1a1a; /* Match sidebar background */
+    border-top: 1px solid #333; /* Separator line */
+    gap: 10px; /* Space between input and button */
+    flex-shrink: 0; /* Prevent shrinking */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4); /* Shadow above input */
 }
 
-input[type="text"] {
-    flex: 1;
-    padding: 12px;
-    font-size: 16px;
-    border: none;
-    background: #333;
+#chat-input {
+    flex-grow: 1; /* Input field takes up most space */
+    padding: 12px 15px;
+    border: 1px solid #444; /* Dark border */
+    border-radius: 8px; /* Rounded corners */
+    background: #2a2a2a; /* Darker input background */
+    color: #e0e0e0;
+    font-size: 1em;
+    outline: none; /* Remove default outline */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+
+
+/* Removed default input container button styling */
+/*
+.input-container button {
+    background: #007bff;
     color: white;
+    border: none;
+    padding: 12px 20px;
     border-radius: 8px;
-    box-shadow: 0 0 5px #000;
-    font-family: 'Inter', sans-serif;
-}
-
-button {
-    padding: 12px;
-    font-size: 16px;
-    background: #1e1e1e;
-    color: white;
-    border: none;
     cursor: pointer;
-    border-radius: 8px;
-    box-shadow: 0 0 8px #000;
-    transition: background 0.3s;
-    font-family: 'Inter', sans-serif;
+    font-size: 1em;
+    transition: background 0.2s ease, transform 0.1s ease;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-button:hover {
-    background: #2c2c2c;
+.input-container button:hover {
+    background: #0056b3;
+     transform: translateY(-1px);
+}
+.input-container button:active {
+     transform: translateY(0);
+}
+*/
+
+/* Removed specific mic button styling */
+/*
+#mic-button {
+     background: #28a745;
 }
 
-.message {
-    padding: 12px;
-    border-radius: 16px;
-    margin: 4px 0;
-    max-width: 75%;
-    word-wrap: break-word;
-    white-space: pre-wrap;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
-    position: relative;
-    font-family: 'Inter', sans-serif;
+#mic-button:hover {
+    background: #218838;
+}
+*/
+
+
+/* --- Creative Sidebar Styling --- */
+#creative-sidebar {
+    width: 400px; /* Default width */
+    background: #1a1a1a; /* Match input container background */
+    border-left: 1px solid #333; /* Separator line */
+    position: relative; /* Needed for resize handle */
+    display: flex; /* Use flex column layout */
+    flex-direction: column;
+    flex-shrink: 0; /* Prevent shrinking below width */
+    overflow: hidden; /* Hide content that exceeds bounds */
+    box-shadow: -2px 0 15px rgba(0, 0, 0, 0.6); /* Shadow on the left */
 }
 
-.user {
-    background: #121212;
-    color: white;
+#creative-sidebar .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+#creative-sidebar .section-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #eee; /* Lighter color for header */
+    font-weight: 700; /* Bold header */
+}
+
+#creative-sidebar .close-creative-sidebar {
+    background: none;
+    border: none;
+    color: #aaa; /* Grey color */
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+#creative-sidebar .close-creative-sidebar:hover {
+    color: #dc3545; /* Red on hover */
+}
+
+/* --- Styling for the Dropdown and Display Area --- */
+#creative-output-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0; /* Prevent controls from shrinking */
+}
+
+/* Style for the Creative Outputs Select (Borderless) */
+#creative-output-select {
+    flex-grow: 1; /* Allow dropdown to take up space */
+    padding: 8px 10px;
+    border: none; /* Removed border */
+    border-radius: 4px;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 0.9em;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#creative-output-select:focus {
+     border-color: #007bff;
+     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+#creative-output-select option {
+    background: #2a2a2a; /* Match select background */
+    color: #e0e0e0;
+}
+
+
+#creative-output-display {
+    flex-grow: 1; /* Take up remaining space */
+    overflow-y: auto; /* Enable scrolling for the content */
+    padding: 15px 20px;
+    white-space: pre-wrap; /* Preserve whitespace and wrap text */
+    word-break: break-all; /* Break long words */
+     scrollbar-width: thin; /* Make scrollbar thinner */
+    scrollbar-color: #444 #1a1a1a; /* Scrollbar color (thumb and track) */
+     /* Removed inner shadow as it's less common for text areas */
+}
+
+/* Custom scrollbar styles for Webkit browsers */
+#creative-output-display::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+}
+
+#creative-output-display::-webkit-scrollbar-track {
+    background: #1a1a1a; /* Color of the track */
+}
+
+#creative-output-display::-webkit-scrollbar-thumb {
+    background-color: #555; /* Darker thumb */
+    border-radius: 4px; /* Rounded corners of the thumb */
+    border: 2px solid #1a1a1a; /* Border around the thumb */
+}
+
+
+/* Styling for code content within the display area */
+#creative-output-display.code-content {
+    display: flex; /* Use flexbox for line numbers and code */
+    gap: 10px; /* Space between line numbers and code */
+    font-family: 'Monospace', monospace; /* Monospace font for code */
+    font-size: 0.9em;
+    background: #1e1e1e; /* Dark background for code area */
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto; /* Enable horizontal scrolling for wide code */
+}
+
+#creative-output-display.code-content .line-numbers {
+    flex-shrink: 0; /* Prevent line numbers from shrinking */
+    color: #6a9955; /* Greenish color for line numbers */
     text-align: right;
-    align-self: flex-end;
-    border-top-right-radius: 0;
+    user-select: none; /* Prevent selecting line numbers */
+    padding-right: 10px;
+    border-right: 1px solid #333; /* Separator */
+     overflow-y: hidden; /* Hide vertical scrollbar */
 }
 
-.ai {
-    background: #2f2f2f;
+#creative-output-display.code-content .code-inner {
+    flex-grow: 1; /* Code takes up remaining space */
+    overflow-x: auto; /* Enable horizontal scrolling */
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding-right: 10px; /* Padding to prevent code hiding scrollbar */
+}
+
+#creative-output-display.code-content pre {
+    margin: 0; /* Remove default margin from pre */
+}
+
+#creative-output-display.code-content code {
+    display: block; /* Ensure code block fills container */
+    /* Syntax highlighting styles from highlight.js will apply here */
+}
+
+
+
+
+/* Ensure the icon color is white */
+#save-active-creative i,
+#copy-active-creative i,
+#clear-active-creative i,
+#attach-button i,
+#mic-button i {
     color: white;
-    align-self: flex-start;
-    border-top-left-radius: 0;
+    font-size: 1em; /* Ensure consistent icon size */
 }
 
-.message + .message:not(.user):not(.ai),
-.user + .ai,
-.ai + .user {
-    margin-top: 10px;
+
+/* Optional: Add hover effect for the rounded buttons */
+#save-active-creative:hover,
+#copy-active-creative:hover,
+#clear-active-creative:hover,
+#attach-button:hover,
+#mic-button:hover {
+    opacity: 0.8; /* Slightly reduce opacity on hover */
+    transform: translateY(-1px); /* Subtle lift effect */
 }
 
-.error {
-    background: #b00020;
+#save-active-creative:active,
+#copy-active-creative:active,
+#clear-active-creative:active,
+#attach-button:active,
+#mic-button:active {
+     transform: translateY(0); /* Reset on click */
+}
+
+
+
+/* Removed styling for the bottom button group as it's removed from HTML */
+/*
+#creative-sidebar .action-button-group {
+     display: flex;
+     justify-content: center;
+     gap: 10px;
+     padding: 10px 0;
+     border-top: 1px solid #333;
+     flex-shrink: 0;
+}
+
+#creative-sidebar .action-button-group button {
+     background: #333;
+     color: white;
+     border: none;
+     padding: 8px 12px;
+     border-radius: 6px;
+     cursor: pointer;
+     font-size: 0.9em;
+     transition: background 0.2s ease;
+     text-align: center;
+     width: auto;
+     gap: 5px;
+}
+
+#creative-sidebar .action-button-group button:hover {
+     background: #444;
+}
+
+#creative-sidebar .action-button-group .save-button:hover { background: #007bff; }
+#creative-sidebar .action-button-group .copy-button:hover { background: #ffc107; color: #333;}
+#creative-sidebar .action-button-group .clear-button:hover { background: #dc3545; }
+*/
+
+
+/* --- Resize Handle Styling --- */
+.resize-handle-creative {
+    width: 10px; /* Width of the handle */
+    height: 100%;
+    background: transparent; /* Transparent background */
+    position: absolute;
+    top: 0;
+    left: 0; /* Position on the left edge of the creative sidebar */
+    cursor: ew-resize; /* East-West resize cursor */
+    z-index: 1; /* Ensure handle is above other elements */
+}
+
+
+/* --- Logs, Settings, and Memory Styling (Absolute Overlay Sections) --- */
+/* Position these sections absolutely to overlay the main content */
+#logs-container,
+#settings-container,
+#memory-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9); /* Semi-transparent dark overlay */
+    z-index: 20; /* Ensure they are above main content and sidebar */
+    padding: 20px;
+    box-sizing: border-box;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    color: #e0e0e0;
+}
+
+
+#logs-container h2,
+#settings-container h2,
+#memory-container h2 {
+    color: #eee;
+    border-bottom: 1px solid #555; /* Darker border */
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+#logs-box,
+#memory {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.memory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.delete-memory-button {
+    background-color: #d9534f; /* Reddish color for delete */
     color: white;
-    font-weight: bold;
-    border: 1px solid #ff4d4d;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
 }
 
-.timestamp-banner {
-    text-align: center;
-    padding: 6px 12px;
-    background-color: #333;
-    color: #bbb;
-    font-size: 14px;
-    border-radius: 12px;
-    margin: 20px auto 10px auto;
-    width: fit-content;
-    box-shadow: 0 0 5px #000;
-    font-family: 'Inter', sans-serif;
+.delete-memory-button:hover {
+    background-color: #c9302c;
+}
+/* Custom scrollbar styles for Webkit browsers */
+#logs-box::-webkit-scrollbar,
+#memory::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+}
+
+#logs-box::-webkit-scrollbar-track,
+#memory::-webkit-scrollbar-track {
+    background: #1a1a1a; /* Color of the track */
+}
+
+#logs-box::-webkit-scrollbar-thumb,
+#memory::-webkit-scrollbar-thumb {
+    background-color: #555; /* Darker thumb */
+    border-radius: 4px; /* Rounded corners of the thumb */
+    border: 2px solid #1a1a1a; /* Border around the thumb */
+}
+
+
+/* Basic styling for log messages */
+.log-message {
+    margin-bottom: 5px;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    word-break: break-all;
+}
+
+.log-message.debug { color: #888; } /* Grey for debug */
+.log-message.info { color: #ccc; } /* Light grey for info */
+.log-message.warning { color: #ffc107; } /* Yellow for warning */
+.log-message.error { color: #dc3545; font-weight: bold; } /* Red for error */
+.log-message.critical { color: #f8d7da; background-color: #721c24; font-weight: bold; } /* Dark red background for critical */
+
+/* Basic styling for memory content */
+#memory div {
+    margin-bottom: 5px;
+}
+
+
+/* --- Settings Styling --- */
+#settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .toggle-container {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .toggle-label {
-    font-size: 16px;
+    font-size: 1em;
     color: #ccc;
-    font-family: 'Inter', sans-serif;
 }
 
+/* The switch - the box around the slider */
 .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 52px;
-    height: 28px;
+ position: relative;
+ display: inline-block;
+ width: 40px; /* Smaller width */
+ height: 20px; /* Smaller height */
 }
 
+/* Hide default HTML checkbox */
 .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
+ opacity: 0;
+ width: 0;
+ height: 0;
 }
 
+/* The slider */
 .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #222;
-    transition: 0.4s;
-    border-radius: 34px;
+ position: absolute;
+ cursor: pointer;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background-color: #ccc; /* Grey background when off */
+ -webkit-transition: .4s;
+ transition: .4s;
+ border-radius: 20px; /* Rounded slider */
 }
 
 .slider:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.4s;
-    border-radius: 50%;
+ position: absolute;
+ content: "";
+ height: 16px; /* Smaller size */
+ width: 16px; /* Smaller size */
+ left: 2px; /* Adjusted position */
+ bottom: 2px; /* Adjusted position */
+ background-color: white;
+ -webkit-transition: .4s;
+ transition: .4s;
+ border-radius: 50%; /* Round slider knob */
 }
 
 input:checked + .slider {
-    background-color: #555;
+ background-color: #007bff; /* Blue background when on */
+}
+
+input:focus + .slider {
+ box-shadow: 0 0 1px #007bff;
 }
 
 input:checked + .slider:before {
-    transform: translateX(24px);
+ -webkit-transform: translateX(20px); /* Move knob */
+ -ms-transform: translateX(20px);
+ transform: translateX(20px);
 }
 
-#ai-orb {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    background-color: #00ccff;
-    box-shadow: 0 0 25px #00ccff;
-    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
-    margin-left: 10px;
-    position: relative;
-    overflow: hidden;
+
+/* --- AI Orb Container and Styling --- */
+#ai-orb-container {
+    width: 150px;
+    height: 150px; /* Fixed height for the orb container */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.ai-orb {
+    width: 100%; /* Take full width of container */
+    height: 100%; /* Take full height of container */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-#visualizer {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+/* Ensure the canvas fills its container */
+.ai-orb canvas {
+    display: block;
+    width: 100% !important; /* Override inline styles */
+    height: 100% !important; /* Override inline styles */
 }
 
-.visual-bar {
-    position: absolute;
-    bottom: 50%;
-    left: 50%;
-    width: 4px;
-    height: 20px;
-    background-color: white;
-    transform: translate(-50%, 50%) scaleY(1);
-    transform-origin: bottom;
-    animation: pulseBar 1s infinite ease-in-out;
-    opacity: 0.5;
-    border-radius: 4px;
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column; /* Stack sidebar and main content */
+        overflow-y: auto; /* Allow scrolling on smaller screens */
+    }
+
+    #sidebar {
+        width: 100%; /* Full width sidebar */
+        height: auto; /* Auto height */
+        flex-direction: row; /* Row layout for sidebar items */
+        padding: 10px;
+        gap: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        position: static; /* Remove absolute positioning */
+        z-index: auto;
+        flex-wrap: wrap; /* Allow items to wrap */
+        justify-content: center; /* Center items */
+    }
+
+    #sidebar button {
+        width: auto; /* Auto width for buttons */
+        text-align: center; /* Center text */
+        padding: 8px 12px;
+        font-size: 14px;
+        gap: 5px;
+    }
+
+    #sidebar button span {
+        display: inline; /* Always show text on mobile */
+        opacity: 1;
+    }
+
+    #sidebar.collapsed {
+        width: 100%;
+        padding: 10px;
+        align-items: center;
+    }
+
+    #sidebar.collapsed button span {
+         display: inline; /* Always show text on mobile */
+         opacity: 1;
+    }
+
+    #toggle-sidebar {
+        display: none; /* Hide toggle button on small screens */
+    }
+
+    #main-content {
+        flex-direction: column; /* Stack chat and creative */
+        height: auto; /* Auto height */
+        overflow: visible; /* Allow content to overflow */
+    }
+
+    .section {
+        padding: 15px;
+    }
+
+    #chat-container {
+        padding-bottom: 8px;
+    }
+
+    #chat-box {
+        padding-right: 8px;
+        padding-bottom: 8px;
+    }
+
+     /* Adjust padding for inner divs on mobile */
+    .output-block-content.code-content .line-numbers {
+        padding-left: 10px; /* Smaller padding */
+    }
+     .output-block-content.code-content .code-inner {
+         padding-right: 10px; /* Smaller padding */
+     }
+
+    /* Adjust logs section padding and inner box padding for mobile */
+    #logs-container {
+        padding: 10px;
+        position: static; /* Remove absolute positioning on mobile */
+        background-color: #0d0d0d; /* Use body background */
+        z-index: auto;
+    }
+    #logs-box {
+        padding: 10px;
+        max-height: 60vh; /* Limit height */
+        min-height: 150px; /* Ensure a minimum height */
+    }
+
+    /* Adjust memory section padding and inner box padding for mobile */
+    #memory-container {
+        padding: 10px;
+        position: static; /* Remove absolute positioning on mobile */
+        background-color: #0d0d0d; /* Use body background */
+        z-index: auto;
+    }
+     #memory {
+         padding: 10px;
+         max-height: 60vh; /* Limit height */
+         min-height: 150px; /* Ensure a minimum height */
+     }
+
+     /* Adjust settings section padding for mobile */
+     #settings-container {
+         padding: 10px;
+         position: static; /* Remove absolute positioning on mobile */
+         background-color: #0d0d0d; /* Use body background */
+         z-index: auto;
+     }
+
+
+    .chat-message {
+        max-width: 85%;
+    }
+
+
+    .input-container {
+        flex-direction: row;
+        gap: 8px;
+        padding-top: 8px;
+    }
+
+    #chat-input {
+        padding: 10px 12px;
+        border: none;
+        font-size: 15px;
+    }
+
+    /* Adjusted input container button padding for mobile */
+    .input-container button {
+        padding: 0; /* Remove padding to let width/height control size */
+        font-size: 16px;
+        width: 30px; /* Match desktop size */
+        height: 30px; /* Match desktop size */
+    }
+
+
+    #creative-sidebar {
+        width: 100%; /* Full width */
+        height: auto; /* Auto height */
+        border-left: none; /* Remove left border */
+        border-top: 1px solid #333; /* Add top border */
+        position: static; /* Remove absolute positioning */
+        flex-direction: column; /* Stack header, content, buttons */
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4); /* Shadow above */
+    }
+
+    #creative-sidebar .section-header {
+        padding: 10px 15px;
+    }
+
+    #creative-output-container { /* This container is now just a wrapper for the display area */
+        padding: 0; /* Remove padding from this container */
+        max-height: 40vh; /* Limit height on mobile */
+        min-height: 150px; /* Ensure minimum height */
+        overflow-y: visible; /* Allow the display area to handle its own scrolling */
+        gap: 0; /* Remove gap */
+    }
+
+    #creative-output-display {
+         padding: 10px 15px; /* Add padding to the display area */
+         max-height: none; /* Remove max height limitation */
+         min-height: auto; /* Remove min height limitation */
+    }
+
+
+    .resize-handle-creative {
+        display: none; /* Hide resize handle on mobile */
+    }
+
+     #ai-orb-container {
+         display: none; /* Hide orb on mobile to save space */
+     }
+
+     /* Adjusted styling for the action buttons in controls on mobile */
+     #creative-output-controls {
+          flex-wrap: wrap; /* Allow buttons to wrap */
+          justify-content: center;
+          padding: 8px 15px;
+          gap: 8px;
+     }
+
+     #creative-output-controls .action-button {
+          padding: 6px 10px;
+          font-size: 0.8em;
+     }
+
+     /* Removed styling for the bottom button group on mobile */
+     /*
+     #creative-sidebar .action-button-group {
+          padding: 8px 0;
+     }
+
+     #creative-sidebar .action-button-group button {
+          padding: 6px 10px;
+          font-size: 0.8em;
+     }
+     */
+}
+/* --- input area background --- */
+.input-container {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #1f1f1f; /* dark grey */
+    border-radius: 16px; /* round corners */
+    border: 1px solid #333; /* thin lighter border */
+    margin: 15px;
 }
 
-@keyframes pulseBar {
-    0%, 100% { transform: translate(-50%, 50%) scaleY(1); opacity: 0.3; }
-    50% { transform: translate(-50%, 50%) scaleY(2); opacity: 1; }
-}
-
-.log-date-header {
-    font-weight: bold;
-    font-size: 16px;
-    margin: 20px 0 10px 0;
-    color: #00ccff;
-    border-bottom: 1px solid #00ccff;
-    padding-bottom: 4px;
-}
-
-.log-separator {
+/* --- text input style --- */
+#chat-input {
+    flex-grow: 1;
+    background: transparent;
+    color: #e0e0e0;
     border: none;
-    border-top: 1px dashed #444;
-    margin: 10px 0;
+    padding: 12px 15px;
+    font-size: 1em;
+    outline: none;
+    border-radius: 12px;
 }
 
-.log-line {
-    font-family: monospace;
-    font-size: 14px;
-    color: #ccc;
-    margin: 3px 0;
-    white-space: pre-wrap;
+/* --- make input box glow slightly on focus --- */
+
+/* --- buttons like plus, send, mic --- */
+.input-container button,
+#save-active-creative,
+#copy-active-creative,
+#clear-active-creative,
+
+#save-active-creative,
+#copy-active-creative,
+#clear-active-creative,
+#refresh-logs-button {
+    background: #1f1f1f;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s, box-shadow 0.3s, border-color 0.3s;
 }
-/* general log entry style */
-.log-entry {
-    background: #f0f0f0;
-    color: #333;
+
+/* --- hover effect --- */
+.input-container button:hover,
+#save-active-creative,
+#copy-active-creative,
+#clear-active-creative,
+#refresh-logs-button:hover {
+    background: #2a2a2a;
+    border-color: #555;
+    box-shadow: 0 0 8px #555;
+}
+
+/* --- active/clicked state --- */
+.input-container button:active,
+#save-active-creative,
+#copy-active-creative,
+#clear-active-creative,
+#refresh-logs-button:active {
+    background: #333;
+    border-color: #666;
+    box-shadow: 0 0 4px #666;
+}
+/* --- style for the whole generated message block --- */
+.generated-message {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* space between text and button */
+    background: #1a1a1a; /* dark background */
+    padding: 12px 16px;
+    border-radius: 16px; /* rounded */
+    font-size: 1em;
+    font-weight: 500;
+    color: #e0e0e0;
+    max-width: fit-content; /* only as wide as needed */
+}
+
+/* --- reuse view button styling --- */
+.view-creative-link {
+    background: #2a2a2a; /* dark grey */
+    color: #e0e0e0; /* light grey text */
+    border: 1px solid #333; /* soft thin border */
+    border-radius: 12px; /* slightly rounded */
+    padding: 4px 12px; /* smaller padding */
+    font-size: 0.95em; /* slightly smaller font */
+    font-weight: 600; /* bold */
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+/* --- hover effect --- */
+.view-creative-link:hover {
+    background: #333; /* slightly lighter background */
+    border-color: #555; /* slightly lighter border */
+}
+
+/* --- active click effect --- */
+.view-creative-link:active {
+    background: #444;
+    border-color: #666;
+}
+#logs-box {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px; /* Smaller gap for log messages */
+    margin-bottom: 15px;
+}
+
+.log-message {
     padding: 8px 12px;
-    margin: 6px 0;
-    border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    white-space: pre-wrap;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    transition: background 0.2s ease;
+    border-radius: 8px;
+    word-break: break-word;
+    font-size: 0.9em;
+    line-height: 1.4;
+    background-color: #1a1a1a; /* Default dark background */
+    border: 1px solid #2a2a2a;
 }
 
-/* hover effect */
-.log-entry:hover {
-    background: #e0e0e0;
+.log-message.debug {
+    color: #888; /* Grey text for debug */
+    border-color: #333;
 }
 
-/* error highlighting */
-.log-entry.error {
-    background: #ffe6e6;
-    color: #c00;
+.log-message.info {
+    color: #ccc; /* Light grey text for info */
+    border-color: #444;
+}
+
+.log-message.warning {
+    color: #ffc107; /* Yellow text for warning */
+    border-color: #ffc107;
+}
+
+.log-message.error {
+    color: #dc3545; /* Red text for error */
+    border-color: #dc3545;
     font-weight: bold;
-    border-left: 4px solid #c00;
+}
+
+.log-message.critical {
+    color: #e0a800; /* Darker yellow/orange for critical */
+    background-color: #dc3545; /* Red background for critical */
+    border-color: #e0a800;
+    font-weight: bold;
+}
+
+.log-message.end-of-logs {
+    text-align: center;
+    font-style: italic;
+    color: #888;
+    border: none;
+    background: transparent;
+    margin-top: 10px;
+}
+
+#refresh-logs-button {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#refresh-logs-button:hover {
+    background: #333;
+    color: #e0e0e0; /* Keep color grey/white on hover */
+    box-shadow: 0 0 6px rgba(224, 224, 224, 0.3); /* Subtle light grey glow */
+}
+
+#refresh-logs-button:active {
+    background: #444;
+    box-shadow: 0 0 3px rgba(224, 224, 224, 0.4); /* Stronger light grey glow */
+}
+/* Style for Edit and Delete buttons - Matching sidebar/input button style */
+.edit-memory-button,
+.delete-memory-button {
+    background: #2a2a2a; /* Darker background */
+    border: none; /* No default border */
+    color: #e0e0e0; /* Light text */
+    border-radius: 8px; /* Rounded corners */
+    padding: 8px; /* Padding */
+    cursor: pointer;
+    font-size: 1em; /* Icon size */
+    display: flex; /* Center icon */
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.edit-memory-button:hover,
+.delete-memory-button:hover {
+    background: #333;
+    color: #e0e0e0; /* Keep color grey/white on hover */
+    box-shadow: 0 0 6px rgba(224, 224, 224, 0.3); /* Subtle light grey glow */
+}
+
+.edit-memory-button:active,
+.delete-memory-button:active {
+    background: #444;
+    box-shadow: 0 0 3px rgba(224, 224, 224, 0.4); /* Stronger light grey glow on active */
+}
+
+/* Specific hover colors for better visual feedback (optional, can override above) */
+/* Keeping the blue hover for consistency with other buttons */
+/* .edit-memory-button:hover {
+    color: #007bff;
+}
+
+.delete-memory-button:hover {
+    color: #dc3545;
+} */
+
+
+/* Styling for the input field when editing */
+.memory-edit-input {
+    flex-grow: 1; /* Take up space */
+    padding: 8px;
+    border: 1px solid #555; /* Highlight border when editing - Grey */
+    border-radius: 4px;
+    background: #2a2a2a; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    font-size: 1em;
+    outline: none;
+    margin-right: 10px; /* Space from buttons */
+    box-sizing: border-box; /* Include padding/border in width */
+    min-width: 150px; /* Ensure input has a minimum width */
+}
+
+/* Styling for Save and Cancel buttons during editing */
+.save-memory-button,
+.cancel-memory-button {
+    background: #2a2a2a;
+    border: none; /* No default border */
+    color: #e0e0e0;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 1em; /* Icon size */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.save-memory-button:hover {
+    background: #333;
+    color: #e0e0e0; /* Keep color grey/white on hover */
+    box-shadow: 0 0 6px rgba(224, 224, 224, 0.3); /* Subtle light grey glow */
+}
+
+.cancel-memory-button:hover {
+    background: #333;
+    color: #e0e0e0; /* Keep color grey/white on hover */
+    box-shadow: 0 0 6px rgba(224, 224, 224, 0.3); /* Subtle light grey glow */
+}
+
+.save-memory-button:active,
+.cancel-memory-button:active {
+    background: #444;
+    box-shadow: 0 0 3px rgba(224, 224, 224, 0.4); /* Stronger light grey glow on active */
 }

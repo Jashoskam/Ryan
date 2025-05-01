@@ -1,23 +1,46 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 import time
-import numpy as np
-import faiss
-import pickle
 import logging
-import openai
-import requests
-import random
-import os
 import traceback
-from fastapi.responses import PlainTextResponse, JSONResponse
+import json
+from typing import Optional, Dict, Any, List
+import os
+from datetime import datetime, timedelta
+try:
+    from firebase_admin import firestore
+except ImportError:
+    firestore = None
+
+# Import RyanAI, db, and CURRENT_USER_ID from the ryan_ai module
+try:
+    from ryan_ai import RyanAI, db, CURRENT_USER_ID
+    if db is None:
+        logging.error("Firebase db connection is None in ryan_ai.py. Memory functions will not work.")
+    if CURRENT_USER_ID is None:
+         logging.error("CURRENT_USER_ID is None in ryan_ai.py.")
+
+except ImportError as e:
+    logging.error(f"Failed to import RyanAI or db from ryan_ai: {e}")
+    logging.error(traceback.format_exc())
+    RyanAI = None
+    db = None
+    CURRENT_USER_ID = "unknown_user"
+
+
+if RyanAI:
+    ryan = RyanAI(db)
+    logging.info("RyanAI instance created in ryan.py.")
+else:
+    ryan = None
+    logging.error("RyanAI instance could not be created due to import failure.")
+
 
 app = FastAPI()
 
-# enable cors for frontend communication
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,196 +49,330 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# setup logging
-logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s - %(message)s")
+# Setup logging
+if not logging.getLogger().handlers:
+    logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.info("Logging configured for ryan.py")
+else:
+    logging.info("Logging already configured, reusing existing handlers.")
 
-# load ai model with tracing
-try:
-    logging.info("attempting to load model and tokenizer")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-125m")
-    model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
-    logging.info("model and tokenizer loaded successfully")
-except Exception as e:
-    tokenizer = None
-    model = None
-    logging.error(f"model loading failed: {e}")
-    logging.error(traceback.format_exc())
 
-def dummy_response(input_text):
-    return f"i'm still learning, but here's what i think: '{input_text[::-1]}'"
-
-class AIMemory:
-    def __init__(self, dimension=512, memory_file="memory.pkl"):
-        self.memory = faiss.IndexFlatIP(dimension)
-        self.data = []
-        self.memory_file = memory_file
-        self.load_memory()
-
-    def store_memory(self, user_input, ai_response, embedding):
-        embedding = embedding / np.linalg.norm(embedding)
-        embedding = embedding.astype('float32').reshape(1, -1)
-        self.memory.add(embedding)
-        self.data.append((time.time(), user_input, ai_response))
-        self.save_memory()
-        logging.info(f"stored memory: input='{user_input}' response='{ai_response}'")
-
-    def save_memory(self):
-        with open(self.memory_file, "wb") as f:
-            pickle.dump(self.data, f)
-            logging.info("memory saved")
-
-    def load_memory(self):
-        try:
-            with open(self.memory_file, "rb") as f:
-                self.data = pickle.load(f)
-            logging.info(f"loaded {len(self.data)} memories")
-        except FileNotFoundError:
-            logging.info("no saved memory found")
-
-    def reset(self):
-        self.memory = faiss.IndexFlatIP(512)
-        self.data = []
-        self.save_memory()
-        logging.info("memory reset")
-
-    def get_recent(self):
-        return self.data[-5:] if len(self.data) >= 5 else self.data
-
-    def stats(self):
-        total = len(self.data)
-        last_chat_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.data[-1][0])) if total else "no chats yet"
-        return {
-            "total_chats": total,
-            "last_chat_time": last_chat_time,
-            "memory_size": self.memory.ntotal
-        }
-
-memory = AIMemory(dimension=512)
-
+# Pydantic models (Keep existing models)
 class Message(BaseModel):
     message: str
+    creative_context: Optional[str] = None
 
+class DocumentUpload(BaseModel):
+    fileName: str
+    fileContent: str
+
+class MemoryItem(BaseModel):
+    key: str
+    value: Any
+    category: Optional[str] = "general"
+    timestamp: Any
+
+class MemoryUpdate(BaseModel):
+    value: Any
+
+class DailyUsageData(BaseModel):
+    date: str
+    count: int
+
+class UsageStats(BaseModel):
+    daily_usage: List[DailyUsageData]
+    total_messages: int
+
+# --- New Pydantic Models for Coding Tasks ---
+class CodeExecutionRequest(BaseModel):
+    code: str
+    language: str
+
+class CodeDebugRequest(BaseModel):
+    code: str
+    error_output: str
+    language: str
+    context: Optional[str] = None
+
+class CodeFixRequest(BaseModel):
+    original_code: str
+    suggested_fix: str
+    language: str
+    context: Optional[str] = None
+
+class CodeAnalysisRequest(BaseModel):
+    code: str
+    task_description: Optional[str] = None
+    context: Optional[str] = None
+
+# --- Existing Chat Endpoint ---
 @app.post("/chat")
 async def chat(message: Message):
-    return await chat_with_ai(message)
+    logging.info(f"Received chat message: {message.message[:100]}...")
+    logging.debug(f"Received creative_context: {message.creative_context[:100] if message.creative_context else 'None'}...")
 
-async def chat_with_ai(message: Message):
-    user_input = message.message.lower()
-    logging.info(f"received input: {user_input}")
-
-    if user_input == "reset memory":
-        memory.reset()
-        return {"response": "all memory has been wiped. i'm starting fresh."}
-
-    if user_input.startswith("generate code for"):
-        language = user_input.replace("generate code for", "").strip()
-        return {"response": generate_code(language)}
-
-    if "search the web for" in user_input:
-        query = user_input.replace("search the web for", "").strip()
-        return {"response": web_search(query)}
+    if ryan is None:
+         logging.error("RyanAI instance is not available, cannot process chat.")
+         return JSONResponse(content={"type": "error", "content": "AI backend is not available."}, status_code=500)
 
     try:
-        logging.info("step 1: entered try block")
-        if tokenizer and model:
-            logging.info("step 2: tokenizer and model available")
-            tokens = tokenizer(user_input, return_tensors="pt")
-            logging.info("step 3: tokens created")
-            output = model.generate(**tokens, max_length=100, num_return_sequences=1)
-            logging.info("step 4: output generated")
-            response = tokenizer.decode(output[0], skip_special_tokens=True)
-            logging.info(f"step 5: decoded response: {response}")
-            if response.lower().startswith(user_input):
-                response = response[len(user_input):].strip()
-                logging.info("step 6: trimmed repeated user input from response")
-        else:
-            logging.warning("step 7: tokenizer or model missing, using dummy response")
-            response = dummy_response(user_input)
-
-        logging.info("step 8: analyzing emotion")
-        emotion_score = analyze_emotion(user_input)
-        logging.info(f"step 9: emotion score: {emotion_score}")
-
-        logging.info("step 10: generating curiosity")
-        curious_question = generate_curiosity(user_input)
-        logging.info(f"step 11: curiosity question: {curious_question}")
-
-        if curious_question:
-            response += f" by the way, {curious_question}"
-
-        logging.info("step 12: generating dummy embedding")
-        embedding = np.random.rand(512).astype('float32')
-        memory.store_memory(user_input, response, embedding)
-        logging.info("step 13: memory stored")
-
+        response_dict = ryan.chatbot(message.message, creative_context=message.creative_context)
+        logging.info(f"Generated response (type: {response_dict.get('type', 'unknown')}): {str(response_dict.get('content', 'No content'))[:100]}...")
+        return JSONResponse(content=response_dict)
     except Exception as e:
-        logging.error(f"processing error: {e}")
+        logging.error(f"Error processing chat message: {e}")
         logging.error(traceback.format_exc())
-        response = "i encountered an issue processing your request."
-        emotion_score = "unknown"
-        logging.info(f"user: {user_input} | ai: {response} | emotion: {emotion_score}")
-        return {"response": response, "emotion_score": emotion_score}
+        return JSONResponse(content={"type": "error", "content": f"An internal error occurred: {str(e)}"}, status_code=500)
 
-    log_entry = f"user: {user_input} | ai: {response} | emotion: {emotion_score}"
-    logging.info(log_entry)
+# --- Existing Document Upload Endpoint ---
+@app.post("/upload_document")
+async def upload_document(document: DocumentUpload):
+    logging.info(f"Received document upload: {document.fileName}")
 
-    return {"response": response, "emotion_score": emotion_score}
+    if ryan is None or not hasattr(ryan, 'process_document'):
+         logging.error("RyanAI instance or process_document method is not available, cannot process document upload.")
+         return JSONResponse(content={"type": "error", "content": "Document processing is not available."}, status_code=500)
 
+    try:
+        confirmation_message = ryan.process_document(document.fileName, document.fileContent)
+        logging.info(f"Document '{document.fileName}' processed. Confirmation: {confirmation_message[:100]}...")
+        return JSONResponse(content={"type": "text", "content": confirmation_message})
+    except Exception as e:
+        logging.error(f"Error processing document upload '{document.fileName}': {e}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(content={"type": "error", "content": f"Error processing document: {str(e)}"}, status_code=500)
+
+# --- Existing Logs Endpoint ---
 @app.get("/logs")
-async def get_logs():
+async def get_logs(limit: int = Query(50, ge=1), offset: int = Query(0, ge=0)):
+    logging.info(f"Received request for logs with limit={limit}, offset={offset}")
+    log_file_path = "app.log"
     try:
-        with open("app.log", "r") as f:
-            lines = f.readlines()[-50:]  # get last 50 log lines
-        clean_lines = [line.strip() for line in lines if line.strip()]
-        return JSONResponse(content={"logs": clean_lines})
+        if not os.path.exists(log_file_path):
+            logging.warning(f"Log file not found at {log_file_path}")
+            return JSONResponse(content={"type": "logs", "content": "Log file not found."}, status_code=404)
+
+        with open(log_file_path, 'r') as f:
+            all_lines = f.readlines()
+
+        total_lines = len(all_lines)
+        logging.debug(f"Total log lines found: {total_lines}")
+
+        all_lines.reverse()
+
+        start_index = offset
+        end_index = offset + limit
+
+        paginated_lines = all_lines[start_index:min(end_index, total_lines)]
+
+        paginated_lines.reverse()
+
+        has_more = end_index < total_lines
+        logging.debug(f"Returning {len(paginated_lines)} lines. Has more logs: {has_more}")
+
+        logs_content = "".join(paginated_lines)
+
+        return JSONResponse(content={
+            "type": "logs",
+            "content": logs_content,
+            "next_offset": offset + len(paginated_lines),
+            "has_more": has_more
+        })
+
     except Exception as e:
-        return JSONResponse(content={"logs": [f"error reading logs: {str(e)}"]})
-
-@app.get("/stats")
-async def get_stats():
-    return memory.stats()
-
-def generate_code(language):
-    code_templates = {
-        "python": "def hello_world():\n    print('hello, world!')",
-        "html": "<!DOCTYPE html>\n<html>\n<head><title>my page</title></head>\n<body><h1>hello, world!</h1></body>\n</html>",
-        "css": "body {\n    background-color: #121212;\n    color: white;\n    font-family: 'Inter', sans-serif;\n}"
-    }
-    return code_templates.get(language, "i don't know how to generate that language.")
-
-def web_search(query):
-    try:
-        url = f"https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("AbstractText", "no relevant information found.")
-        else:
-            return "failed to fetch results from the web."
-    except Exception as e:
-        logging.error(f"web search error: {e}")
+        logging.error(f"Error reading log file: {e}")
         logging.error(traceback.format_exc())
-        return "web search failed."
+        return JSONResponse(content={"type": "error", "content": f"Error reading log file: {str(e)}"}, status_code=500)
 
-def analyze_emotion(text):
-    emotions = {"happy": ["great", "awesome", "fantastic"], "sad": ["bad", "terrible", "horrible"], "neutral": []}
-    for emotion, words in emotions.items():
-        if any(word in text for word in words):
-            return emotion
-    return "neutral"
+# --- Existing Memory Endpoints ---
+@app.get("/memory", response_model=List[MemoryItem])
+async def get_memory():
+    logging.info("Received request for memory.")
+    if ryan is None or ryan.db is None:
+        logging.error("RyanAI instance or Firebase db is not available, cannot fetch memory.")
+        raise HTTPException(status_code=500, detail={"type": "error", "content": "Memory system not available."})
 
-def generate_curiosity(user_input):
-    prompts = [
-        "why do you think that is?",
-        "can you tell me more about it?",
-        "what made you say that?",
-        "how often do you feel that way?",
-        "have you experienced that recently?"
-    ]
-    if any(word in user_input for word in ["i think", "i feel", "i like", "i don't like"]):
-        return random.choice(prompts)
-    return ""
+    try:
+        memory_ref = ryan.db.collection('users').document(CURRENT_USER_ID).collection('memory')
+        docs = memory_ref.stream()
+
+        memory_list = []
+        for doc in docs:
+            memory_data = doc.to_dict()
+            memory_list.append({
+                "key": doc.id,
+                "value": memory_data.get("value", "N/A"),
+                "category": memory_data.get("category", "general"),
+                "timestamp": memory_data.get("timestamp", None)
+            })
+
+        logging.info(f"Fetched {len(memory_list)} memory entries.")
+        return memory_list
+
+    except Exception as e:
+        logging.error(f"Error fetching memory for user {CURRENT_USER_ID}: {e}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail={"type": "error", "content": f"Error fetching memory: {str(e)}"})
+
+@app.put("/memory/{key}")
+async def update_memory(key: str, memory_update: MemoryUpdate):
+    logging.info(f"Received request to update memory key: {key}")
+    if ryan is None or ryan.db is None:
+        logging.error("RyanAI instance or Firebase db is not available, cannot update memory.")
+        raise HTTPException(status_code=500, detail={"type": "error", "content": "Memory system not available."})
+
+    if not key:
+         logging.warning("Received request to update memory with empty key.")
+         raise HTTPException(status_code=400, detail={'type': 'error', 'content': 'Memory key is missing from path.'})
+
+    try:
+        doc_ref = ryan.db.collection('users').document(CURRENT_USER_ID).collection('memory').document(key)
+        doc = doc_ref.get()
+
+        if doc.exists:
+            update_data = {'value': memory_update.value}
+            if firestore:
+                 update_data['timestamp'] = firestore.SERVER_TIMESTAMP
+            doc_ref.update(update_data)
+
+            logging.info(f"Memory updated for user '{CURRENT_USER_ID}', key '{key}'.")
+            return JSONResponse(content={"type": "success", "content": f"Memory entry for '{key}' updated successfully."})
+        else:
+            logging.warning(f"Attempted to update non-existent memory key '{key}' for user '{CURRENT_USER_ID}'.")
+            raise HTTPException(status_code=404, detail={"type": "error", "content": f"Memory entry '{key}' not found for update."})
+
+    except Exception as e:
+        logging.error(f"Error updating memory for user {CURRENT_USER_ID}, key '{key}': {e}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail={"type": "error", "content": f"Error updating memory: {str(e)}"})
+
+@app.delete("/memory/{key}")
+async def delete_memory(key: str):
+    logging.info(f"Received request to delete memory key: {key}")
+    if ryan is None or ryan.db is None:
+        logging.error("RyanAI instance or Firebase db is not available, cannot delete memory.")
+        raise HTTPException(status_code=500, detail={"type": "error", "content": "Memory system not available."})
+
+    if not key:
+         logging.warning("Received request to delete memory with empty key.")
+         raise HTTPException(status_code=400, detail={'type': 'error', 'content': 'Memory key is missing from path.'})
+
+    try:
+        doc_ref = ryan.db.collection('users').document(CURRENT_USER_ID).collection('memory').document(key)
+        doc = doc_ref.get()
+
+        if doc.exists:
+            doc_ref.delete()
+            logging.info(f"Memory deleted for user '{CURRENT_USER_ID}', key '{key}'.")
+            return JSONResponse(content={"type": "success", "content": f"Memory entry for '{key}' deleted successfully."})
+        else:
+            logging.warning(f"Attempted to delete non-existent memory key '{key}' for user '{CURRENT_USER_ID}'.")
+            raise HTTPException(status_code=404, detail={"type": "error", "content": f"Memory entry '{key}' not found for deletion."})
+
+    except Exception as e:
+        logging.error(f"Error deleting memory for user {CURRENT_USER_ID}: {e}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail={"type": "error", "content": f"Error deleting memory: {str(e)}"})
+
+# --- Existing Stats Endpoint ---
+@app.get("/stats", response_model=UsageStats)
+async def get_stats():
+    logging.info("Received request for usage statistics.")
+    daily_usage_list = []
+    total_messages = 0
+    today = datetime.now()
+
+    for i in range(7):
+        date = today - timedelta(days=i)
+        message_count = (i + 1) * 5 + 10
+        total_messages += message_count
+        daily_usage_list.append({
+            "date": date.strftime("%Y-%m-%d"),
+            "count": message_count
+        })
+
+    daily_usage_list.reverse()
+
+    stats_data = {
+        "daily_usage": daily_usage_list,
+        "total_messages": total_messages
+    }
+    logging.info(f"Generated sample usage statistics: {stats_data}")
+
+    return UsageStats(**stats_data)
+
+
+# --- New Endpoints for Coding Tasks ---
+
+@app.post("/execute_code")
+async def execute_code_endpoint(request: CodeExecutionRequest):
+    logging.info(f"Received request to execute {request.language} code.")
+    if ryan is None or not hasattr(ryan, 'execute_code'):
+         logging.error("RyanAI instance or execute_code method is not available.")
+         return JSONResponse(content={"type": "error", "content": "Code execution service is not available."}, status_code=500)
+    try:
+        # Call the execute_code method from RyanAI
+        result = ryan.execute_code(request.code, request.language)
+        logging.info(f"Code execution result: Success={result.get('success')}, ReturnCode={result.get('return_code')}")
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error executing code: {e}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(content={"type": "error", "content": f"An internal error occurred during code execution: {str(e)}"}, status_code=500)
+
+
+@app.post("/debug_code")
+async def debug_code_endpoint(request: CodeDebugRequest):
+    logging.info(f"Received request to debug {request.language} code.")
+    if ryan is None or not hasattr(ryan, 'debug_code'):
+         logging.error("RyanAI instance or debug_code method is not available.")
+         return JSONResponse(content={"type": "error", "content": "Code debugging service is not available."}, status_code=500)
+    try:
+        # Call the debug_code method from RyanAI
+        result = ryan.debug_code(request.code, request.error_output, request.language, context=request.context)
+        logging.info(f"Code debugging result: Success={result.get('success')}")
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error debugging code: {e}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(content={"type": "error", "content": f"An internal error occurred during code debugging: {str(e)}"}, status_code=500)
+
+
+@app.post("/fix_code")
+async def fix_code_endpoint(request: CodeFixRequest):
+    logging.info(f"Received request to fix {request.language} code.")
+    if ryan is None or not hasattr(ryan, 'fix_code'):
+         logging.error("RyanAI instance or fix_code method is not available.")
+         return JSONResponse(content={"type": "error", "content": "Code fixing service is not available."}, status_code=500)
+    try:
+        # Call the fix_code method from RyanAI
+        result = ryan.fix_code(request.original_code, request.suggested_fix, request.language, context=request.context)
+        logging.info(f"Code fixing result: Success={result.get('success')}")
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error fixing code: {e}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(content={"type": "error", "content": f"An internal error occurred during code fixing: {str(e)}"}, status_code=500)
+
+
+@app.post("/analyze_code")
+async def analyze_code_endpoint(request: CodeAnalysisRequest):
+    logging.info(f"Received request to analyze code.")
+    if ryan is None or not hasattr(ryan, 'analyze_code'):
+         logging.error("RyanAI instance or analyze_code method is not available.")
+         return JSONResponse(content={"type": "error", "content": "Code analysis service is not available."}, status_code=500)
+    try:
+        # Call the analyze_code method from RyanAI
+        result = ryan.analyze_code(request.code, request.task_description, context=request.context)
+        logging.info(f"Code analysis result: Success={result.get('success')}")
+        return JSONResponse(content=result)
+    except Exception as e:
+        logging.error(f"Error analyzing code: {e}")
+        logging.error(traceback.format_exc())
+        return JSONResponse(content={"type": "error", "content": f"An internal error occurred during code analysis: {str(e)}"}, status_code=500)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=5001)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+
